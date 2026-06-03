@@ -245,23 +245,31 @@
 }
 
 .markdown-content table {
-  width: 100%;
   border-collapse: collapse;
-  margin: 0.75rem 0;
   font-size: 0.92rem;
+  width: 100%;
 }
 
 .markdown-content th {
   background: var(--muted);
   font-weight: 600;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: 0.6rem 0.85rem;
+  border-bottom: 2px solid var(--border);
   text-align: left;
+  white-space: nowrap;
 }
 
 .markdown-content td {
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-content tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-content tr:nth-child(even) td {
+  background: var(--muted);
 }
 
 .markdown-content blockquote {
@@ -271,6 +279,103 @@
   color: var(--muted-foreground);
   background: var(--muted);
   border-radius: 0 6px 6px 0;
+}
+
+/* ─── KaTeX Math Rendering ─── */
+.markdown-content .katex {
+  font-size: 1.05em;
+}
+
+.markdown-content .katex-display {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* ─── Code Syntax Highlighting (Prism) ─── */
+.markdown-content code[class*="language-"],
+.markdown-content pre[class*="language-"] {
+  color: oklch(0.9 0.01 280);
+  background: oklch(0.15 0.02 280);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  direction: ltr;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  tab-size: 2;
+  hyphens: none;
+}
+
+.markdown-content pre[class*="language-"] {
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-content :not(pre) > code[class*="language-"] {
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  white-space: normal;
+}
+
+/* Prism token colors for light/dark */
+.markdown-content .token.comment,
+.markdown-content .token.prolog,
+.markdown-content .token.doctype,
+.markdown-content .token.cdata {
+  color: oklch(0.55 0.02 200);
+}
+
+.markdown-content .token.punctuation {
+  color: oklch(0.7 0.03 280);
+}
+
+.markdown-content .token.property,
+.markdown-content .token.tag,
+.markdown-content .token.boolean,
+.markdown-content .token.number,
+.markdown-content .token.constant,
+.markdown-content .token.symbol,
+.markdown-content .token.deleted {
+  color: oklch(0.7 0.18 30);
+}
+
+.markdown-content .token.selector,
+.markdown-content .token.attr-name,
+.markdown-content .token.string,
+.markdown-content .token.char,
+.markdown-content .token.builtin,
+.markdown-content .token.inserted {
+  color: oklch(0.65 0.15 150);
+}
+
+.markdown-content .token.operator,
+.markdown-content .token.entity,
+.markdown-content .token.url,
+.markdown-content .language-css .token.string,
+.markdown-content .style .token.string {
+  color: oklch(0.7 0.08 100);
+}
+
+.markdown-content .token.atrule,
+.markdown-content .token.attr-value,
+.markdown-content .token.keyword {
+  color: oklch(0.65 0.18 310);
+}
+
+.markdown-content .token.function,
+.markdown-content .token.class-name {
+  color: oklch(0.65 0.15 50);
+}
+
+.markdown-content .token.regex,
+.markdown-content .token.important,
+.markdown-content .token.variable {
+  color: oklch(0.7 0.18 20);
 }
 
 .markdown-content a {
