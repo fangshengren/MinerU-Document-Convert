@@ -1,0 +1,150 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+sdist/
+*.whl
+.eggs/
+*.manifest
+*.spec
+.python-version
+*.sage.py
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# ============================================================
+# Environment & Secrets
+# ============================================================
+.env
+.env.*
+!.env.example
+*.secret
+
+# ============================================================
+# Flask / App runtime
+# ============================================================
+file/
+markdownResult/
+task_status.json
+instance/
+.webassets-cache
+
+# ============================================================
+# Node.js / Next.js (front/)
+# ============================================================
+node_modules/
+.npm/
+.yarn/
+.pnpm/
+
+# Next.js build output
+.next/
+out/
+
+# Next.js cache
+.next/standalone/
+.next/static/
+
+# Turbopack
+.turbo/
+
+# ============================================================
+# IDE & Editors
+# ============================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.*.swp
+.*.swo
+.luarc.json
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ============================================================
+# Logs & Debug
+# ============================================================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ============================================================
+# Testing & Coverage
+# ============================================================
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+*.cover
+.hypothesis/
+cython_debug/
+
+# ============================================================
+# TypeScript / Next.js misc
+# ============================================================
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+.next.config.*
+
+# ============================================================
+# Docker
+# ============================================================
+.docker/
+docker-compose.override.yml
+Dockerfile.local
+
+# ============================================================
+# Misc
+# ============================================================
+*.bak
+*.tmp
+*.temp
+tmp/
+temp/
+.ftp/
+.cache/
