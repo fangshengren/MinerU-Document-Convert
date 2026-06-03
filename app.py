@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import time
 import zipfile
 import uuid
@@ -151,10 +152,16 @@ def poll_extract_results(batch_ids):
     return all_results
 
 
-def download_extract_zip(extract_results, save_to_disk=True):
-    """Download result zips and extract full.md content.
+# Common image extensions found in MinerU output
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"}
 
-    Returns list of dicts: {file_name, md_name, md_content, md_path (if save_to_disk)}.
+
+def download_extract_zip(extract_results, save_to_disk=True):
+    """Download result zips and extract full.md content + images.
+
+    Returns list of dicts:
+        {file_name, md_name, md_content, md_path (if save_to_disk),
+         images: [{name: "hash.jpg", data: bytes}]}
     """
     results = []
     if save_to_disk:
@@ -180,23 +187,66 @@ def download_extract_zip(extract_results, save_to_disk=True):
             continue
 
         with zipfile.ZipFile(io.BytesIO(zip_resp.content)) as zf:
-            for member in zf.namelist():
+            all_members = zf.namelist()
+            stem = Path(file_name).stem
+
+            # --- Find full.md and determine its parent dir ---
+            md_content = None
+            md_name = stem + ".md"
+            md_parent = ""  # prefix for sibling files (e.g. "abc123/")
+            for member in all_members:
                 if member.endswith("full.md") or member == "full.md":
                     md_content = zf.read(member).decode("utf-8", errors="replace")
-                    md_name = Path(file_name).stem + ".md"
-                    entry = {
-                        "file_name": file_name,
-                        "md_name": md_name,
-                        "md_content": md_content,
-                    }
-
-                    if save_to_disk:
-                        md_path = RESULT_DIR / md_name
-                        md_path.write_text(md_content, encoding="utf-8")
-                        entry["md_path"] = str(md_path)
-
-                    results.append(entry)
+                    # Extract the parent directory prefix of full.md
+                    if "/" in member:
+                        md_parent = member[: member.rindex("/") + 1]  # "abc123/"
                     break
+
+            if md_content is None:
+                print(f"Skipping {file_name}: no full.md found in ZIP")
+                continue
+
+            # --- Parse markdown to find referenced image filenames ---
+            # Patterns: ![alt](images/hash.jpg) or ![alt](./images/hash.jpg)
+            referenced_names = set(re.findall(r'\]\(\.?/?images/([^)]+)\)', md_content))
+
+            # --- Extract only images that are referenced in the markdown ---
+            images_prefix = md_parent + "images/"
+            images = []
+            for member in all_members:
+                if member.startswith(images_prefix):
+                    img_name = Path(member).name
+                    img_ext = Path(img_name).suffix.lower()
+                    if img_ext in _IMAGE_EXTS and img_name in referenced_names:
+                        img_data = zf.read(member)
+                        images.append({"name": img_name, "data": img_data})
+
+            if referenced_names and not images:
+                print(f"  Warning: markdown references {len(referenced_names)} image(s) but none found in ZIP's images/ dir")
+
+            entry = {
+                "file_name": file_name,
+                "md_name": md_name,
+                "md_content": md_content,
+                "images": images,
+            }
+
+            if save_to_disk:
+                doc_dir = RESULT_DIR / stem
+                # Write markdown
+                md_path = doc_dir / md_name
+                doc_dir.mkdir(parents=True, exist_ok=True)
+                md_path.write_text(md_content, encoding="utf-8")
+                entry["md_path"] = str(md_path)
+
+                # Write images to disk
+                if images:
+                    img_dir = doc_dir / "images"
+                    img_dir.mkdir(parents=True, exist_ok=True)
+                    for img in images:
+                        (img_dir / img["name"]).write_bytes(img["data"])
+
+            results.append(entry)
 
     return results
 
@@ -284,6 +334,36 @@ def serve_image(filename):
             if candidate.exists() and candidate.is_file():
                 return send_file(candidate)
     return jsonify({"code": 1, "msg": f"Image not found: {filename}"}), 404
+
+
+@app.route("/api/markdown-images/<markdown_file_id>/<path:image_filename>", methods=["GET"])
+def serve_markdown_image(markdown_file_id, image_filename):
+    """Serve an image stored in Appwrite that belongs to a markdown file.
+
+    Looks up the image in markdown_image_store by markdown_file_id + image_filename,
+    downloads it from Appwrite Storage, and serves it.
+    """
+    try:
+        from databaseOperation import query_images_by_file_id
+
+        records = query_images_by_file_id(markdown_file_id)
+        appwrite_file_id = None
+        for rec in records:
+            if rec["fileName"] == image_filename:
+                appwrite_file_id = rec["appwriteFileId"]
+                break
+
+        if not appwrite_file_id:
+            return jsonify({"code": 1, "msg": f"Image not found: {image_filename}"}), 404
+
+        info = get_file(appwrite_file_id)
+        return send_file(
+            io.BytesIO(info["content"]),
+            mimetype=info.get("mime_type", "image/jpeg"),
+            download_name=image_filename,
+        )
+    except Exception as e:
+        return jsonify({"code": 1, "msg": str(e)}), 500
 
 
 @app.route("/api/convert-upload", methods=["POST"])

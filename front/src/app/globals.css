@@ -278,6 +278,14 @@
   text-decoration: underline;
 }
 
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  display: block;
+}
+
 /* ─── Scrollbar Styling ─── */
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;

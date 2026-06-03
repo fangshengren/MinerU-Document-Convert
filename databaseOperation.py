@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List, Dict, Any, Optional
 
 from appwrite.client import Client
@@ -13,6 +14,7 @@ APPWRITE_KEY = os.getenv("APPWRITE_KEY")
 PROJECT_ID = os.getenv("PROJECT_ID")
 DATABASE_ID = os.getenv("DATABASE_ID")
 TABLE_FILE_STORE_ID = os.getenv("TABLE_FILE_STORE_ID")
+TABLE_IMAGE_STORE_ID = os.getenv("TABLE_IMAGE_STORE_ID")
 
 client = Client()
 
@@ -177,15 +179,142 @@ def query_bill_data(bill_type: str, company_name: str):
             content = file_info["content"]
             if isinstance(content, bytes):
                 content = content.decode("utf-8", errors="replace")
+
+            # Query image records for this markdown file
+            image_records = query_images_by_file_id(file_id)
+
+            # Transform image URLs only for images that exist in the DB:
+            #   images/xxx.jpg  →  /api/markdown-images/{fileId}/xxx.jpg
+            for img in image_records:
+                content = content.replace(
+                    f"](images/{img['fileName']})",
+                    f"](/api/markdown-images/{file_id}/{img['fileName']})",
+                )
+
             results.append({
                 "filename": file_info["file_name"],
                 "content": content,
+                "file_id": file_id,
             })
 
         return results
 
     except Exception as e:
         print(f"[ERROR] Query failed: {str(e)}")
+        return []
+
+
+# ─── Image Store Operations ────────────────────────────────────────
+
+def insert_image_record(file_id: str, appwrite_file_id: str, file_name: str):
+    """Insert a single record into markdown_image_store.
+
+    Args:
+        file_id: The markdown file's Appwrite Storage fileId.
+        appwrite_file_id: The image file's Appwrite Storage fileId.
+        file_name: Original image filename (e.g. hash.jpg).
+
+    Returns:
+        dict: Insert result or None on failure.
+    """
+    try:
+        data = {
+            "fileId": file_id,
+            "appwriteFileId": appwrite_file_id,
+            "fileName": file_name,
+        }
+        result = tablesDB.create_row(
+            database_id=DATABASE_ID,
+            table_id=TABLE_IMAGE_STORE_ID,
+            row_id=ID.unique(),
+            data=data,
+        )
+        return result
+    except Exception as e:
+        print(f"[ERROR] Insert image record failed: {str(e)}")
+        return None
+
+
+def batch_insert_image_records(data_list: List[Dict[str, Any]], transaction_id: Optional[str] = None):
+    """Batch insert records into markdown_image_store.
+
+    Args:
+        data_list: List of dicts with keys:
+            - file_id: The markdown file's Appwrite Storage fileId.
+            - appwrite_file_id: The image file's Appwrite Storage fileId.
+            - file_name: Original image filename.
+        transaction_id: Optional transaction ID.
+
+    Returns:
+        dict: Batch insert result or None on failure.
+    """
+    if not data_list:
+        print("[ERROR] Image data list is empty")
+        return None
+
+    rows = []
+    for item in data_list:
+        row = {
+            "$id": ID.unique(),
+            "fileId": item.get("file_id"),
+            "appwriteFileId": item.get("appwrite_file_id"),
+            "fileName": item.get("file_name"),
+        }
+        rows.append(row)
+
+    try:
+        result = tablesDB.create_rows(
+            database_id=DATABASE_ID,
+            table_id=TABLE_IMAGE_STORE_ID,
+            rows=rows,
+            transaction_id=transaction_id,
+        )
+        success_count = len(result.rows) if hasattr(result, "rows") else len(rows)
+        print(f"[OK] Batch inserted {success_count} image record(s)")
+        return result
+    except Exception as e:
+        print(f"[ERROR] Batch insert image records failed: {str(e)}")
+        return None
+
+
+def query_images_by_file_id(file_id: str):
+    """Query all image records for a given markdown fileId.
+
+    Args:
+        file_id: The markdown file's Appwrite Storage fileId.
+
+    Returns:
+        list of dicts: [{fileName, appwriteFileId}, ...]
+    """
+    try:
+        rows = tablesDB.list_rows(
+            database_id=DATABASE_ID,
+            table_id=TABLE_IMAGE_STORE_ID,
+            queries=[
+                Query.equal("fileId", file_id),
+            ],
+        )
+
+        row_list = []
+        if hasattr(rows, "rows"):
+            row_list = rows.rows
+        else:
+            for item in rows:
+                if isinstance(item, tuple) and item[0] == "rows":
+                    row_list = item[1]
+                    break
+
+        results = []
+        for row in row_list:
+            row_data = row.data if hasattr(row, "data") else {}
+            results.append({
+                "fileName": row_data.get("fileName", ""),
+                "appwriteFileId": row_data.get("appwriteFileId", ""),
+            })
+
+        return results
+    except Exception as e:
+        print(f"[ERROR] Query images failed: {str(e)}")
         return []
 
 

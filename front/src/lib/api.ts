@@ -175,6 +175,11 @@ export const api = {
     return `${API_BASE}/api/documents/${fileId}/preview`
   },
 
+  /** Build a URL for a markdown image served from Appwrite via the backend. */
+  getMarkdownImageUrl(markdownFileId: string, imageFileName: string) {
+    return `${API_BASE}/api/markdown-images/${encodeURIComponent(markdownFileId)}/${encodeURIComponent(imageFileName)}`
+  },
+
   getDocumentInfo(fileId: string) {
     return request<DocumentFile>(`/api/documents/${fileId}/info`)
   },

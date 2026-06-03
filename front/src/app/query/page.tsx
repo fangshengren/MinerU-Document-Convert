@@ -2,20 +2,13 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Search, FileText, Eye, AlertCircle, FolderSearch } from "lucide-react"
+import { Search, FileText, Eye, AlertCircle, FolderSearch, Check } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AnimatedContainer } from "@/components/shared/animated-container"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -146,49 +139,55 @@ export default function QueryPage() {
                   </>
                 )}
               </Button>
-            </CardContent>
-          </Card>
 
-          {/* File Selector */}
-          {results.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-            >
-              <Card className="glass-card border-border/40">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                    <span>Matching Files</span>
+              {/* Matching Files — shown below search controls */}
+              {results.length > 0 && (
+                <motion.div
+                  className="pt-3 border-t border-border/40"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-muted-foreground">Matching Files</span>
                     <StatusBadge
                       type="success"
                       label={`${results.length} result${results.length > 1 ? "s" : ""}`}
                     />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select
-                    value={selectedFile}
-                    onValueChange={handleFileSelect}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select a file to preview" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {results.map((r) => (
-                        <SelectItem key={r.filename} value={r.filename}>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                            {r.filename}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+                  </div>
+                  <ScrollArea className="max-h-[180px] rounded-lg border border-border/40">
+                    <div className="space-y-0.5 p-1">
+                      {results.map((r) => {
+                        const isActive = selectedFile === r.filename
+                        return (
+                          <button
+                            key={r.filename}
+                            type="button"
+                            onClick={() => handleFileSelect(r.filename)}
+                            className={[
+                              "w-full flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors text-left",
+                              isActive
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-foreground hover:bg-muted/60",
+                            ].join(" ")}
+                          >
+                            <FileText className={[
+                              "h-3.5 w-3.5 shrink-0",
+                              isActive ? "text-primary" : "text-muted-foreground",
+                            ].join(" ")} />
+                            <span className="truncate flex-1">{r.filename}</span>
+                            {isActive && (
+                              <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Right: Preview */}

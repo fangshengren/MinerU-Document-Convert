@@ -11,7 +11,7 @@ from app import (
     download_extract_zip,
 )
 from documentsOperation import upload_file
-from databaseOperation import batch_insert_bill_data
+from databaseOperation import batch_insert_bill_data, batch_insert_image_records
 
 load_dotenv()
 
@@ -86,6 +86,7 @@ def convert_and_store(file_paths, bill_type, company_name):
 
         if batch_ids:
             md_results = download_extract_zip(poll_extract_results(batch_ids), save_to_disk=False)
+            image_rows = []  # Collect image records for batch insert
             for i, r in enumerate(md_results):
                 md_name = Path(r["file_name"]).stem + ".md"
                 db_row, entry = _upload_content_and_record(
@@ -97,6 +98,25 @@ def convert_and_store(file_paths, bill_type, company_name):
                 entry["original_file_id"] = original_id
                 db_rows.append(db_row)
                 results.append(entry)
+
+                # Upload images extracted from ZIP
+                file_id = entry["file_id"]
+                for img in r.get("images", []):
+                    img_io = io.BytesIO(img["data"])
+                    try:
+                        upload_result = upload_file(img_io, file_name=img["name"])
+                        image_rows.append({
+                            "file_id": file_id,
+                            "appwrite_file_id": upload_result["file_id"],
+                            "file_name": img["name"],
+                        })
+                        print(f"  Uploaded image {img['name']} -> {upload_result['file_id']}")
+                    except Exception as e:
+                        print(f"  [ERROR] Failed to upload image {img['name']}: {e}")
+
+            # Batch insert image records
+            if image_rows:
+                batch_insert_image_records(image_rows)
 
     if not results:
         print("No files were processed.")

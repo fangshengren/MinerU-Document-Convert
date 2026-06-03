@@ -22,6 +22,7 @@ export interface ConvertAndStoreResult {
 export interface QueryRuleResult {
   filename: string
   content: string
+  file_id?: string
 }
 
 // ─── Files ───
