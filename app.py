@@ -17,6 +17,8 @@ from documentsOperation import upload_file, get_file, get_file_preview, list_fil
 load_dotenv()
 
 app = Flask(__name__)
+# CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+# CORS(app, origins=[o.strip() for o in CORS_ORIGINS.split(",")])
 CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
 
 BASE_DIR = Path(__file__).parent
