@@ -705,6 +705,61 @@ def download_project(file_id):
         return jsonify({"code": 1, "msg": str(e)}), 500
 
 
+@app.route("/api/projects/<file_id>", methods=["DELETE"])
+def delete_project(file_id):
+    """Cascade-delete a project: markdown file + original file + all images + DB records."""
+    try:
+        from databaseOperation import (
+            list_all_file_store,
+            query_images_by_file_id,
+            delete_file_store_records,
+            delete_image_store_records,
+        )
+
+        # 1. Find the file_store record to get original_file_id
+        original_file_id = ""
+        rows = list_all_file_store()
+        for row in rows:
+            if row.get("fileId") == file_id:
+                original_file_id = row.get("originalFileId", "")
+                break
+
+        # 2. Delete all associated image files from Appwrite Storage
+        image_records = query_images_by_file_id(file_id)
+        for img in image_records:
+            try:
+                delete_file(img["appwriteFileId"])
+                print(f"  Deleted image: {img['fileName']} ({img['appwriteFileId']})")
+            except Exception as e:
+                print(f"  Failed to delete image {img['fileName']}: {e}")
+
+        # 3. Delete the markdown file from Appwrite Storage
+        delete_file(file_id)
+
+        # 4. Delete the original file from Appwrite Storage (if exists)
+        if original_file_id:
+            try:
+                delete_file(original_file_id)
+                print(f"  Deleted original file: {original_file_id}")
+            except Exception as e:
+                print(f"  Failed to delete original file {original_file_id}: {e}")
+
+        # 5. Clean up database records
+        delete_image_store_records(file_id)
+        delete_file_store_records(file_id)
+
+        return jsonify({
+            "code": 0,
+            "msg": f"Project {file_id} and all associated files deleted.",
+            "data": {
+                "deleted_images": len(image_records),
+                "deleted_original": bool(original_file_id),
+            },
+        })
+    except Exception as e:
+        return jsonify({"code": 1, "msg": str(e)}), 500
+
+
 # ─── Bill Processing APIs ────────────────────────────────────────
 
 @app.route("/api/convert-and-store", methods=["POST"])

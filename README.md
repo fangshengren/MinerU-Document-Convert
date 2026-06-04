@@ -13,17 +13,16 @@ project/
 ├── mixOperation.py         # 转换 + 存储组合工作流
 ├── documentsOperation.py   # Appwrite Storage 文件操作
 ├── databaseOperation.py    # Appwrite TablesDB 数据存取
-├── gradio_app.py           # Gradio 前端 (旧版，端口 7860)
 ├── requirements.txt        # Python 依赖
 ├── .env                    # 环境变量 (密钥、配置)
 ├── file/                   # 源文件目录
 ├── markdownResult/         # 转换结果目录
 │
-└── front/                  # Next.js 前端 (新版)
+└── front/                  # Next.js 前端
     ├── src/app/            # 页面路由
     │   ├── convert/        # 转换与存储
     │   ├── query/          # 规则查询
-    │   ├── documents/      # 文档管理
+    │   ├── documents/      # 项目管理 (按文档 ID 分组)
     │   └── info/           # 系统信息
     ├── src/components/     # UI 组件
     ├── src/lib/            # API 客户端 & 工具
@@ -40,7 +39,7 @@ project/
 | **云端存储** | 源文件与 Markdown 结果上传至 Appwrite Storage |
 | **规则录入** | 文件 + 票据类型 + 公司名称 → 自动转换并入库 |
 | **规则查询** | 按票据类型 + 公司名称检索，支持 Markdown 预览 |
-| **文档管理** | 浏览、上传、下载、删除 Appwrite 中的文件 |
+| **文档管理** | 按项目分组浏览、下载 Markdown+图片 ZIP、删除 |
 | **暗色模式** | 支持明/暗主题切换，跟随系统设置 |
 
 ### 支持的文档格式
@@ -86,6 +85,7 @@ APPWRITE_KEY=your_appwrite_api_key
 PROJECT_ID=your_project_id
 DATABASE_ID=your_database_id
 TABLE_FILE_STORE_ID=your_table_id
+TABLE_IMAGE_STORE_ID=your_image_store_table_id
 BUCKET_ID=your_bucket_id
 ```
 
@@ -113,12 +113,6 @@ npm run dev
 
 打开浏览器访问 `http://localhost:3000`。
 
-> **旧版 Gradio 前端** (可选):
-> ```bash
-> python gradio_app.py
-> # 运行在 http://localhost:7860
-> ```
-
 ---
 
 ## API 接口
@@ -145,10 +139,23 @@ npm run dev
 |---|---|---|
 | `GET` | `/api/documents` | 列出所有文档 |
 | `POST` | `/api/documents/upload` | 上传文档 (`multipart: file`) |
-| `GET` | `/api/documents/<id>` | 下载文档 |
+| `GET` | `/api/documents/fileContent/<id>` | 下载文档文件 |
 | `GET` | `/api/documents/<id>/info` | 文档元数据 |
 | `DELETE` | `/api/documents/<id>` | 删除文档 |
 | `GET` | `/api/documents/<id>/preview` | 文档预览缩略图 |
+
+### 项目管理 (按 Markdown 文件 ID 分组)
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/projects` | 列出所有项目 (含关联图片) |
+| `GET` | `/api/projects/<id>/download` | 下载项目 ZIP (Markdown + images/) |
+
+### 图片服务
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/api/markdown-images/<file_id>/<filename>` | 获取 Markdown 关联的图片 |
 
 ### 本地文件
 
@@ -180,7 +187,7 @@ npm run dev
 |---|---|---|
 | `/convert` | 转换与存储 | 上传文件、配置规则类型和公司、执行转换 |
 | `/query` | 规则查询 | 按类型和公司搜索、Markdown 内容预览 |
-| `/documents` | 文档管理 | 浏览/上传/下载/删除 Appwrite 文件 |
+| `/documents` | 项目管理 | 按文档 ID 分组浏览、文件结构查看、下载 ZIP |
 | `/info` | 系统信息 | API 端点列表、配置状态、支持的格式 |
 
 ---
@@ -225,7 +232,7 @@ flask>=3.0
 flask-cors>=4.0
 requests>=2.31
 python-dotenv>=1.0
-gradio>=4.0          # 旧版前端 (可选)
+appwrite>=16.0
 ```
 
 ### Node.js (front/package.json)
@@ -249,6 +256,7 @@ lucide-react, react-markdown, remark-gfm, react-dropzone
 | `PROJECT_ID` | 是 | Appwrite 项目 ID |
 | `DATABASE_ID` | 是 | Appwrite 数据库 ID |
 | `TABLE_FILE_STORE_ID` | 是 | 文件元数据表 ID |
+| `TABLE_IMAGE_STORE_ID` | 是 | 图片映射表 ID |
 | `BUCKET_ID` | 是 | Appwrite 存储桶 ID |
 
 ---

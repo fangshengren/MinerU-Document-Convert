@@ -355,6 +355,96 @@ def query_images_by_file_id(file_id: str):
         return []
 
 
+def delete_file_store_records(file_id: str):
+    """Delete all records in file_store matching the given fileId.
+
+    Args:
+        file_id: The markdown file's Appwrite Storage fileId.
+
+    Returns:
+        int: Number of deleted records.
+    """
+    try:
+        rows = tablesDB.list_rows(
+            database_id=DATABASE_ID,
+            table_id=TABLE_FILE_STORE_ID,
+            queries=[
+                Query.equal("fileId", file_id),
+            ],
+        )
+
+        row_list = []
+        if hasattr(rows, "rows"):
+            row_list = rows.rows
+        else:
+            for item in rows:
+                if isinstance(item, tuple) and item[0] == "rows":
+                    row_list = item[1]
+                    break
+
+        deleted = 0
+        for row in row_list:
+            row_id = row.id if hasattr(row, "id") else row.get("$id", "")
+            if row_id:
+                tablesDB.delete_row(
+                    database_id=DATABASE_ID,
+                    table_id=TABLE_FILE_STORE_ID,
+                    row_id=row_id,
+                )
+                deleted += 1
+
+        print(f"[OK] Deleted {deleted} file_store record(s) for fileId={file_id}")
+        return deleted
+    except Exception as e:
+        print(f"[ERROR] Delete file_store records failed: {str(e)}")
+        return 0
+
+
+def delete_image_store_records(file_id: str):
+    """Delete all records in markdown_image_store matching the given fileId.
+
+    Args:
+        file_id: The markdown file's Appwrite Storage fileId.
+
+    Returns:
+        int: Number of deleted records.
+    """
+    try:
+        rows = tablesDB.list_rows(
+            database_id=DATABASE_ID,
+            table_id=TABLE_IMAGE_STORE_ID,
+            queries=[
+                Query.equal("fileId", file_id),
+            ],
+        )
+
+        row_list = []
+        if hasattr(rows, "rows"):
+            row_list = rows.rows
+        else:
+            for item in rows:
+                if isinstance(item, tuple) and item[0] == "rows":
+                    row_list = item[1]
+                    break
+
+        deleted = 0
+        for row in row_list:
+            row_id = row.id if hasattr(row, "id") else row.get("$id", "")
+            if row_id:
+                tablesDB.delete_row(
+                    database_id=DATABASE_ID,
+                    table_id=TABLE_IMAGE_STORE_ID,
+                    row_id=row_id,
+                )
+                deleted += 1
+
+        print(f"[OK] Deleted {deleted} image_store record(s) for fileId={file_id}")
+        return deleted
+    except Exception as e:
+        print(f"[ERROR] Delete image_store records failed: {str(e)}")
+        return 0
+
+
 if __name__ == "__main__":
      # 示例1：插入数据（使用自动生成的rowId作为$id）
     # result = insert_bill_data(

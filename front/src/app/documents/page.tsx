@@ -7,14 +7,11 @@ import {
   Upload,
   Trash2,
   Download,
-  File,
   FileText,
   ImageIcon,
   RefreshCw,
-  Eye,
   ChevronRight,
   ChevronLeft,
-  FolderArchive,
   Package,
   Files,
 } from "lucide-react"
@@ -31,13 +28,11 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { AnimatedContainer } from "@/components/shared/animated-container"
 import { api, ApiError } from "@/lib/api"
-import type { Project, ProjectImage } from "@/types"
+import type { Project } from "@/types"
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`
@@ -48,11 +43,11 @@ const formatBytes = (bytes: number) => {
 function ProjectDetail({
   project,
   onBack,
-  onDeleteImage,
+  onDelete,
 }: {
   project: Project
   onBack: () => void
-  onDeleteImage: (imageFileId: string) => void
+  onDelete: () => void
 }) {
   return (
     <motion.div
@@ -74,14 +69,25 @@ function ProjectDetail({
             {project.file_name}
           </span>
         </div>
-        <a
-          href={api.getProjectDownloadUrl(project.file_id)}
-          download
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm font-medium gradient-btn text-white hover:opacity-90 transition-opacity"
-        >
-          <Package className="h-4 w-4" />
-          Download ZIP
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href={api.getProjectDownloadUrl(project.file_id)}
+            download
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md text-sm font-medium gradient-btn text-white hover:opacity-90 transition-opacity"
+          >
+            <Package className="h-4 w-4" />
+            Download ZIP
+          </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Delete
+          </Button>
+        </div>
       </div>
 
       {/* Project Info Card */}
@@ -156,49 +162,36 @@ function ProjectDetail({
           </div>
 
           {/* Image files */}
-          <ScrollArea className="max-h-[400px]">
-            {project.images.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-                No images in this project
-              </div>
-            ) : (
-              project.images.map((img, i) => (
-                <div
-                  key={img.file_id}
-                  className="flex items-center gap-3 pl-10 pr-5 py-2.5 hover:bg-accent/50 transition-colors border-b border-border/20 last:border-0"
-                >
-                  <ImageIcon className="h-4 w-4 text-green-500 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm truncate">{img.file_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(img.size_bytes)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <a
-                      href={api.getMarkdownImageUrl(project.file_id, img.file_name)}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
-                      title="Download image"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                    </a>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                      onClick={() => onDeleteImage(img.file_id)}
-                      title="Delete image"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+          {project.images.length === 0 ? (
+            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+              No images in this project
+            </div>
+          ) : (
+            project.images.map((img) => (
+              <div
+                key={img.file_id}
+                className="flex items-center gap-3 pl-10 pr-5 py-2.5 hover:bg-accent/50 transition-colors border-b border-border/20 last:border-0"
+              >
+                <ImageIcon className="h-4 w-4 text-green-500 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm truncate">{img.file_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatBytes(img.size_bytes)}
+                  </p>
                 </div>
-              ))
-            )}
-          </ScrollArea>
+                <a
+                  href={api.getMarkdownImageUrl(project.file_id, img.file_name)}
+                  download
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors shrink-0"
+                  title="Download image"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </motion.div>
@@ -212,6 +205,8 @@ export default function DocumentsPage() {
   const [uploading, setUploading] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null) // project awaiting delete confirmation
 
   const fetchProjects = useCallback(async () => {
     setLoading(true)
@@ -255,33 +250,26 @@ export default function DocumentsPage() {
     }
   }
 
-  const handleDeleteProject = async (fileId: string) => {
+  const handleDeleteProject = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
     try {
-      await api.deleteDocument(fileId)
-      toast.success("Project deleted")
-      fetchProjects()
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message : "删除失败"
-      toast.error(message)
-    }
-  }
-
-  const handleDeleteImage = async (imageFileId: string) => {
-    try {
-      await api.deleteDocument(imageFileId)
-      toast.success("Image deleted")
-      // Refresh the selected project
-      fetchProjects()
-      // Also update the selected project locally
-      if (selectedProject) {
-        setSelectedProject({
-          ...selectedProject,
-          images: selectedProject.images.filter((img) => img.file_id !== imageFileId),
-        })
+      const result = await api.deleteProject(deleteTarget.file_id)
+      const data = result.data
+      const parts = [`"${deleteTarget.file_name}" deleted`]
+      if (data) {
+        parts.push(`(${data.deleted_images} images`)
+        if (data.deleted_original) parts.push(", original file")
+        parts.push(")")
       }
+      toast.success(parts.join(" "))
+      setDeleteTarget(null)
+      fetchProjects()
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "删除失败"
       toast.error(message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -364,7 +352,7 @@ export default function DocumentsPage() {
             key={`detail-${selectedProject.file_id}`}
             project={selectedProject}
             onBack={() => setSelectedProject(null)}
-            onDeleteImage={handleDeleteImage}
+            onDelete={() => setDeleteTarget(selectedProject)}
           />
         ) : loading ? (
           <motion.div
@@ -493,8 +481,8 @@ export default function DocumentsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive ml-auto"
-                        onClick={() => handleDeleteProject(project.file_id)}
+                        className="h-8 w-8 ml-auto hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        onClick={() => setDeleteTarget(project)}
                         title="Delete project"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -507,6 +495,78 @@ export default function DocumentsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除项目</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+              <p className="text-sm font-medium text-destructive">
+                {deleteTarget?.file_name}
+              </p>
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {deleteTarget?.bill_type && (
+                  <p>
+                    票据类型：{deleteTarget.bill_type}
+                  </p>
+                )}
+                {deleteTarget?.company_name && (
+                  <p>
+                    公司名称：{deleteTarget.company_name}
+                  </p>
+                )}
+                <p>
+                  文件大小：{deleteTarget ? formatBytes(deleteTarget.size_bytes) : ""}
+                </p>
+                <p>
+                  关联图片：{deleteTarget?.images.length ?? 0} 张
+                </p>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              此操作将永久删除该项目的 markdown 文件、所有关联图片
+              {deleteTarget?.original_file_id ? "、原始文件" : ""}
+              以及数据库记录，不可恢复。
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                取消
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteProject}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+                    删除中...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    确认删除
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AnimatedContainer>
   )
 }

@@ -2,4 +2,4 @@ flask>=3.0
 flask-cors>=4.0
 requests>=2.31
 python-dotenv>=1.0
-gradio>=4.0
+appwrite>=16.0

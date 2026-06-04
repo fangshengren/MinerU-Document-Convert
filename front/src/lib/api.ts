@@ -195,6 +195,13 @@ export const api = {
     return `${API_BASE}/api/projects/${fileId}/download`
   },
 
+  deleteProject(fileId: string) {
+    return request<{ deleted_images: number; deleted_original: boolean }>(
+      `/api/projects/${fileId}`,
+      { method: "DELETE" }
+    )
+  },
+
   // ─── API Info ───
 
   getApiInfo() {
