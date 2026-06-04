@@ -202,6 +202,10 @@ export const api = {
     )
   },
 
+  getProjectPreview(fileId: string) {
+    return request<{ content: string }>(`/api/projects/${fileId}/preview`)
+  },
+
   // ─── API Info ───
 
   getApiInfo() {

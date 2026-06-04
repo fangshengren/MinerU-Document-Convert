@@ -705,6 +705,30 @@ def download_project(file_id):
         return jsonify({"code": 1, "msg": str(e)}), 500
 
 
+@app.route("/api/projects/<file_id>/preview", methods=["GET"])
+def preview_project(file_id):
+    """Get markdown content with image URLs rewritten for preview."""
+    try:
+        from databaseOperation import query_images_by_file_id
+
+        md_info = get_file(file_id)
+        content = md_info["content"]
+        if isinstance(content, bytes):
+            content = content.decode("utf-8", errors="replace")
+
+        # Rewrite image URLs: images/xxx.jpg → /api/markdown-images/<file_id>/xxx.jpg
+        image_records = query_images_by_file_id(file_id)
+        for img in image_records:
+            content = content.replace(
+                f"](images/{img['fileName']})",
+                f"](/api/markdown-images/{file_id}/{img['fileName']})",
+            )
+
+        return jsonify({"code": 0, "msg": "ok", "data": {"content": content}})
+    except Exception as e:
+        return jsonify({"code": 1, "msg": str(e)}), 500
+
+
 @app.route("/api/projects/<file_id>", methods=["DELETE"])
 def delete_project(file_id):
     """Cascade-delete a project: markdown file + original file + all images + DB records."""

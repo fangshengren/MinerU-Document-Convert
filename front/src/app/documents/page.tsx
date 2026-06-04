@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   Package,
   Files,
+  Eye,
+  FolderTree,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -31,6 +33,7 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { AnimatedContainer } from "@/components/shared/animated-container"
+import { MarkdownViewer } from "@/components/query/markdown-viewer"
 import { api, ApiError } from "@/lib/api"
 import type { Project } from "@/types"
 
@@ -49,6 +52,31 @@ function ProjectDetail({
   onBack: () => void
   onDelete: () => void
 }) {
+  const [viewMode, setViewMode] = useState<"tree" | "preview">("tree")
+  const [previewContent, setPreviewContent] = useState<string | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
+
+  const handleTogglePreview = async () => {
+    if (viewMode === "preview") {
+      setViewMode("tree")
+      return
+    }
+    setViewMode("preview")
+    if (previewContent === null) {
+      setLoadingPreview(true)
+      try {
+        const response = await api.getProjectPreview(project.file_id)
+        setPreviewContent(response.data?.content || "")
+      } catch (err) {
+        const message = err instanceof ApiError ? err.message : "Failed to load preview"
+        toast.error(message)
+        setViewMode("tree")
+      } finally {
+        setLoadingPreview(false)
+      }
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -70,6 +98,26 @@ function ProjectDetail({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5"
+            onClick={handleTogglePreview}
+            disabled={loadingPreview}
+          >
+            {loadingPreview ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : viewMode === "preview" ? (
+              <FolderTree className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+            {loadingPreview
+              ? "Loading..."
+              : viewMode === "preview"
+                ? "Files"
+                : "Preview"}
+          </Button>
           <a
             href={api.getProjectDownloadUrl(project.file_id)}
             download
@@ -119,81 +167,103 @@ function ProjectDetail({
         </CardContent>
       </Card>
 
-      {/* File Tree */}
-      <Card className="glass-card border-border/40">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Files className="h-4 w-4" />
-            File Structure
-            <span className="text-xs font-normal text-muted-foreground">
-              ({1 + project.images.length} files)
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {/* Markdown file */}
-          <div className="flex items-center gap-3 px-5 py-3 hover:bg-accent/50 transition-colors border-b border-border/30">
-            <FileText className="h-5 w-5 text-primary/70 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium truncate">{project.file_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatBytes(project.size_bytes)} · Markdown
-              </p>
-            </div>
-            <a
-              href={api.getDocumentDownloadUrl(project.file_id)}
-              download
-              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors shrink-0"
-              title="Download markdown"
-            >
-              <Download className="h-4 w-4" />
-            </a>
-          </div>
-
-          {/* Images folder header */}
-          <div className="flex items-center gap-3 px-5 py-2.5 bg-muted/30 border-b border-border/30">
-            <FolderOpen className="h-5 w-5 text-amber-500 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">images/</p>
-              <p className="text-xs text-muted-foreground">
-                {project.images.length} image{project.images.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
-
-          {/* Image files */}
-          {project.images.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-              No images in this project
-            </div>
-          ) : (
-            project.images.map((img) => (
-              <div
-                key={img.file_id}
-                className="flex items-center gap-3 pl-10 pr-5 py-2.5 hover:bg-accent/50 transition-colors border-b border-border/20 last:border-0"
-              >
-                <ImageIcon className="h-4 w-4 text-green-500 shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm truncate">{img.file_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatBytes(img.size_bytes)}
-                  </p>
-                </div>
-                <a
-                  href={api.getMarkdownImageUrl(project.file_id, img.file_name)}
-                  download
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors shrink-0"
-                  title="Download image"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                </a>
+      {/* Content: File Tree or Preview */}
+      {viewMode === "preview" ? (
+        <Card className="glass-card border-border/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Content Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingPreview ? (
+              <div className="space-y-3 py-8">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-shimmer rounded-lg h-16" />
+                ))}
               </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            ) : previewContent ? (
+              <MarkdownViewer content={previewContent} />
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="glass-card border-border/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Files className="h-4 w-4" />
+              File Structure
+              <span className="text-xs font-normal text-muted-foreground">
+                ({1 + project.images.length} files)
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Markdown file */}
+            <div className="flex items-center gap-3 px-5 py-3 hover:bg-accent/50 transition-colors border-b border-border/30">
+              <FileText className="h-5 w-5 text-primary/70 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{project.file_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatBytes(project.size_bytes)} · Markdown
+                </p>
+              </div>
+              <a
+                href={api.getDocumentDownloadUrl(project.file_id)}
+                download
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors shrink-0"
+                title="Download markdown"
+              >
+                <Download className="h-4 w-4" />
+              </a>
+            </div>
+
+            {/* Images folder header */}
+            <div className="flex items-center gap-3 px-5 py-2.5 bg-muted/30 border-b border-border/30">
+              <FolderOpen className="h-5 w-5 text-amber-500 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">images/</p>
+                <p className="text-xs text-muted-foreground">
+                  {project.images.length} image{project.images.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Image files */}
+            {project.images.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                No images in this project
+              </div>
+            ) : (
+              project.images.map((img) => (
+                <div
+                  key={img.file_id}
+                  className="flex items-center gap-3 pl-10 pr-5 py-2.5 hover:bg-accent/50 transition-colors border-b border-border/20 last:border-0"
+                >
+                  <ImageIcon className="h-4 w-4 text-green-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm truncate">{img.file_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatBytes(img.size_bytes)}
+                    </p>
+                  </div>
+                  <a
+                    href={api.getMarkdownImageUrl(project.file_id, img.file_name)}
+                    download
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors shrink-0"
+                    title="Download image"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      )}
     </motion.div>
   )
 }
