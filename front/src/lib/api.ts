@@ -15,7 +15,7 @@ import type {
 
 // Direct Flask access (CORS configured on backend).
 // Switch to "" to route through Next.js rewrite proxy instead.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
 
 class ApiError extends Error {
   code: number

@@ -75,7 +75,7 @@ export default function InfoPage() {
               <Separator />
               <ConfigRow
                 label="Backend URL"
-                value={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}`}
+                value={`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"}`}
               />
               <Separator />
               <ConfigRow

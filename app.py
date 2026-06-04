@@ -5,6 +5,7 @@ import time
 import zipfile
 import uuid
 import threading
+import traceback
 from pathlib import Path
 
 import requests
@@ -17,7 +18,9 @@ from documentsOperation import upload_file, get_file, get_file_preview, list_fil
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+CORS(app, origins=[o.strip() for o in CORS_ORIGINS.split(",")])
+#CORS(app, origins=["http://localhost:3000", "http://127.0.0.1:3000"])
 
 BASE_DIR = Path(__file__).parent
 FILE_DIR = BASE_DIR / "file"
@@ -819,6 +822,7 @@ def convert_and_store_api():
         results = cas(file_paths=file_paths, bill_type=bill_type, company_name=company_name)
         return jsonify({"code": 0, "msg": f"Processed {len(results)} files.", "data": results})
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"code": 1, "msg": str(e)}), 500
 
 
