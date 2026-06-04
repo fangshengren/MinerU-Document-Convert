@@ -54,6 +54,26 @@ export interface DocumentUploadResult {
   size_bytes: number
 }
 
+// ─── Projects (grouped documents) ───
+
+export interface ProjectImage {
+  file_id: string
+  file_name: string
+  size_bytes: number
+}
+
+export interface Project {
+  file_id: string
+  file_name: string
+  mime_type: string
+  bill_type: string
+  company_name: string
+  original_file_id: string
+  size_bytes: number
+  created_at?: string
+  images: ProjectImage[]
+}
+
 // ─── Conversion Tasks ───
 
 export interface TaskInfo {

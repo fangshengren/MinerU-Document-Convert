@@ -6,6 +6,7 @@ import type {
   ResultFile,
   DocumentFile,
   DocumentUploadResult,
+  Project,
   TaskInfo,
   TaskStatus,
   ConvertUploadResult,
@@ -182,6 +183,16 @@ export const api = {
 
   getDocumentInfo(fileId: string) {
     return request<DocumentFile>(`/api/documents/${fileId}/info`)
+  },
+
+  // ─── Projects (grouped by markdown file ID) ───
+
+  listProjects() {
+    return request<Project[]>("/api/projects")
+  },
+
+  getProjectDownloadUrl(fileId: string) {
+    return `${API_BASE}/api/projects/${fileId}/download`
   },
 
   // ─── API Info ───

@@ -137,6 +137,43 @@ def batch_insert_bill_data(data_list: List[Dict[str, Any]], transaction_id: Opti
         return None
 
 
+def list_all_file_store():
+    """List all records from the file_store table.
+
+    Returns:
+        list of dicts: [{fileId, billType, companyName, originalFileId}, ...]
+    """
+    try:
+        rows = tablesDB.list_rows(
+            database_id=DATABASE_ID,
+            table_id=TABLE_FILE_STORE_ID,
+        )
+
+        row_list = []
+        if hasattr(rows, "rows"):
+            row_list = rows.rows
+        else:
+            for item in rows:
+                if isinstance(item, tuple) and item[0] == "rows":
+                    row_list = item[1]
+                    break
+
+        results = []
+        for row in row_list:
+            row_data = row.data if hasattr(row, "data") else {}
+            results.append({
+                "fileId": row_data.get("fileId", ""),
+                "billType": row_data.get("billType", ""),
+                "companyName": row_data.get("companyName", ""),
+                "originalFileId": row_data.get("originalFileId", ""),
+            })
+
+        return results
+    except Exception as e:
+        print(f"[ERROR] List all file_store failed: {str(e)}")
+        return []
+
+
 def query_bill_data(bill_type: str, company_name: str):
     """Query file_store by billType and companyName, return file contents.
 

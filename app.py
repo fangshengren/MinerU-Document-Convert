@@ -606,6 +606,105 @@ def delete_document(file_id):
         return jsonify({"code": 1, "msg": str(e)}), 500
 
 
+# ─── Project APIs (grouped by markdown file ID) ──────────────────
+
+@app.route("/api/projects", methods=["GET"])
+def list_projects():
+    """List all projects grouped by markdown file ID from file_store.
+
+    Each project includes the markdown file info and its associated images.
+    """
+    try:
+        from databaseOperation import list_all_file_store, query_images_by_file_id
+
+        rows = list_all_file_store()
+        projects = []
+        for row in rows:
+            file_id = row.get("fileId")
+            if not file_id:
+                continue
+
+            # Get markdown file info from Appwrite Storage
+            try:
+                file_info = get_file(file_id)
+            except Exception:
+                continue
+
+            # Get associated images
+            image_records = query_images_by_file_id(file_id)
+            images = []
+            for img in image_records:
+                try:
+                    img_info = get_file(img["appwriteFileId"])
+                    images.append({
+                        "file_id": img["appwriteFileId"],
+                        "file_name": img["fileName"],
+                        "size_bytes": img_info.get("size_bytes", 0),
+                    })
+                except Exception:
+                    images.append({
+                        "file_id": img["appwriteFileId"],
+                        "file_name": img["fileName"],
+                        "size_bytes": 0,
+                    })
+
+            projects.append({
+                "file_id": file_id,
+                "file_name": file_info.get("file_name", ""),
+                "mime_type": file_info.get("mime_type", "text/markdown"),
+                "bill_type": row.get("billType", ""),
+                "company_name": row.get("companyName", ""),
+                "original_file_id": row.get("originalFileId", ""),
+                "size_bytes": file_info.get("size_bytes", 0),
+                "created_at": file_info.get("created_at", ""),
+                "images": images,
+            })
+
+        return jsonify({"code": 0, "msg": "ok", "data": projects})
+    except Exception as e:
+        return jsonify({"code": 1, "msg": str(e)}), 500
+
+
+@app.route("/api/projects/<file_id>/download", methods=["GET"])
+def download_project(file_id):
+    """Download a project as a ZIP containing the markdown file and its images."""
+    try:
+        from databaseOperation import query_images_by_file_id
+
+        # Get markdown file
+        md_info = get_file(file_id)
+        md_content = md_info["content"]
+        if isinstance(md_content, bytes):
+            md_content = md_content.decode("utf-8", errors="replace")
+        md_name = md_info["file_name"]
+
+        # Get associated images
+        image_records = query_images_by_file_id(file_id)
+
+        # Create zip in memory
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr(md_name, md_content)
+            for img in image_records:
+                try:
+                    img_info = get_file(img["appwriteFileId"])
+                    img_data = img_info["content"]
+                    zf.writestr(f"images/{img['fileName']}", img_data)
+                except Exception as e:
+                    print(f"  Skipped image {img['fileName']}: {e}")
+
+        buf.seek(0)
+        project_name = Path(md_name).stem
+        return send_file(
+            buf,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=f"{project_name}.zip",
+        )
+    except Exception as e:
+        return jsonify({"code": 1, "msg": str(e)}), 500
+
+
 # ─── Bill Processing APIs ────────────────────────────────────────
 
 @app.route("/api/convert-and-store", methods=["POST"])
